@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">ReservasIMEI</string>
+    <string-array name="mediosDePago">
+        <item>Yape</item>
+        <item>Plin</item>
+        <item>Transferencia</item>
+    </string-array>
+</resources>
