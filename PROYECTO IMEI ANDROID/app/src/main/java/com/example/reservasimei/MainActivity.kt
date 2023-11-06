@@ -53,8 +53,17 @@ class MainActivity : AppCompatActivity() {
         btnRegistrar.setOnClickListener{
             entrarRegistro()
         }
+
+        val btnRegistrarEmpresa=findViewById<TextView>(R.id.btnRegistrarEmpresa)
+        btnRegistrarEmpresa.setOnClickListener{
+            entrarRegistroEmpresa()
+        }
     }
     private fun entrarRegistro(){
+        val i=Intent(this,RegistroActivity::class.java)
+        startActivity(i)
+    }
+    private fun entrarRegistroEmpresa(){
         val i=Intent(this,RegistroActivity::class.java)
         startActivity(i)
     }
