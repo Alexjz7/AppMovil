@@ -8,16 +8,11 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 
-enum class ProviderType{
-    BASIC
-}
-class MenuActivity : AppCompatActivity() {
+class MenuEmpresaActivity : AppCompatActivity() {
     private var correo: String = ""
-    private lateinit var db:DataBase
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_menu)
+        setContentView(R.layout.activity_menu_empresa)
 
         correo = intent.getStringExtra("email") ?: ""
 
@@ -27,9 +22,9 @@ class MenuActivity : AppCompatActivity() {
             nombresYApellidosTextView.text = "$correo"
         }
 
-        val btnReservarCampo = findViewById<Button>(R.id.btnReservarCampo)
-        btnReservarCampo.setOnClickListener {
-            reservarCampo()
+        val btnCrearCampo = findViewById<Button>(R.id.btnCrearCampo)
+        btnCrearCampo.setOnClickListener {
+            CrearCampo(""+correo)
         }
 
         val btnListaReserva = findViewById<Button>(R.id.listaReservas)
@@ -39,25 +34,25 @@ class MenuActivity : AppCompatActivity() {
 
         val btnCerrar = findViewById<Button>(R.id.btnCerrarSesion)
         btnCerrar.setOnClickListener {
-            cerrarSesion()
+            regresarLogin()
         }
 
         val btnMapa = findViewById<Button>(R.id.Mapa)
         btnMapa.setOnClickListener {
             mapa()
         }
-
         //Guardado de datos:
-        val prefs:SharedPreferences.Editor=getSharedPreferences(getString(R.string.prefs_file),Context.MODE_PRIVATE).edit()
+        val prefs: SharedPreferences.Editor=getSharedPreferences(getString(R.string.prefs_file),
+            Context.MODE_PRIVATE).edit()
         prefs.putString("email",correo)
-        prefs.putString("tipo","usuario")
+        prefs.putString("tipo","empresa")
         prefs.apply()
     }
 
-    private fun reservarCampo() {
-        val i = Intent(this, ReservaCampoActivity::class.java)
+    private fun CrearCampo(userName:String) {
+        val i = Intent(this, CrearCampoActivity::class.java)
 
-        i.putExtra("email", correo)
+        i.putExtra("email", userName)
 
         startActivity(i)
     }
@@ -70,20 +65,17 @@ class MenuActivity : AppCompatActivity() {
         startActivity(i)
     }
 
-    private fun cerrarSesion() {
+    private fun regresarLogin() {
         val prefs:SharedPreferences.Editor=getSharedPreferences(getString(R.string.prefs_file),Context.MODE_PRIVATE).edit()
         prefs.clear()
         prefs.apply()
-        regresarLogin()
-    }
-
-    private fun regresarLogin() {
         val i = Intent(this, MainActivity::class.java)
         startActivity(i)
         finish()
     }
     private fun mapa() {
         val i = Intent(this, LocateActivity::class.java)
+        i.putExtra("email", correo)
         startActivity(i)
         finish()
     }

@@ -1,6 +1,7 @@
 package com.example.reservasimei
-
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.text.TextUtils
@@ -8,9 +9,8 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import com.example.reservasimei.util.PreferenceHelper
-import com.example.reservasimei.util.PreferenceHelper.get
-import com.example.reservasimei.util.PreferenceHelper.set
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {
     private lateinit var btnLogin:Button
@@ -21,7 +21,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
+        Sesion()
         btnLogin=findViewById(R.id.btnLogin)
         etCorreo=findViewById(R.id.etUser)
         etPass=findViewById(R.id.etPass)
@@ -34,20 +34,25 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this,"Agrega correo y contraseña",Toast.LENGTH_SHORT).show()
             }else{
                 val id_ingreso=db.comprobarLogin(userText,passText)
+                val id_ingresoEmpresa=db.comprobarLoginEmpresa(userText,passText)
                 if (id_ingreso!=-1){
-                    Toast.makeText(this,"Logueo exitoso",Toast.LENGTH_SHORT).show()
-                    logueo(id_ingreso)
+                    FirebaseAuth.getInstance().signInWithEmailAndPassword(userText.toString(),passText.toString()).addOnCompleteListener(){
+                        if (it.isSuccessful){
+                            logueo(userText,ProviderType.BASIC)
+                            Toast.makeText(this,"Logueo exitoso",Toast.LENGTH_SHORT).show()
+                        }else{
+                            Toast.makeText(this,"No estas registrado",Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
                 }else{
+                    if (id_ingresoEmpresa!=-1){
+                        Toast.makeText(this,"Logueo exitoso",Toast.LENGTH_SHORT).show()
+                        logueoEmpresa(userText)
+                    }
                     Toast.makeText(this,"Usuario o contraseña equivocados",Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-        val antierror=PreferenceHelper.defaultPrefs(this)
-        if (antierror["session",false]){
-            val userText=etCorreo.text.toString()
-            val passText=etPass.text.toString()
-            val id_ingreso=db.comprobarLogin(userText,passText)
-            logueo(id_ingreso)
         }
         val btnRegistrar=findViewById<TextView>(R.id.btnRegistrar)
         btnRegistrar.setOnClickListener{
@@ -58,27 +63,45 @@ class MainActivity : AppCompatActivity() {
         btnRegistrarEmpresa.setOnClickListener{
             entrarRegistroEmpresa()
         }
+
+        val analisis:FirebaseAnalytics=FirebaseAnalytics.getInstance(this)
+        val bundle=Bundle()
+        bundle.putString("message","Firebase activada")
+        analisis.logEvent("InitScreen",bundle)
     }
     private fun entrarRegistro(){
         val i=Intent(this,RegistroActivity::class.java)
         startActivity(i)
     }
     private fun entrarRegistroEmpresa(){
-        val i=Intent(this,RegistroActivity::class.java)
+        val i=Intent(this,RegistroEmpresaActivity::class.java)
         startActivity(i)
     }
-    private fun logueo(userId: Int) {
+    private fun logueo(userId: String, provider: ProviderType) {
         val i = Intent(this, MenuActivity::class.java)
 
-        i.putExtra("userId", userId)
+        i.putExtra("email", userId)
+        i.putExtra("proveedor",provider.name)
+        startActivity(i)
+        finish()
+    }
+    private fun logueoEmpresa(userId: String) {
+        val i = Intent(this, MenuEmpresaActivity::class.java)
 
-        crearSesionPermanente()
+        i.putExtra("email", userId)
         startActivity(i)
         finish()
     }
 
-    private fun crearSesionPermanente(){
-        val parametro=PreferenceHelper.defaultPrefs(this)
-        parametro["session"]=true
+    private fun Sesion(){
+        val prefs: SharedPreferences=getSharedPreferences(getString(R.string.prefs_file),
+            Context.MODE_PRIVATE)
+        val email:String?=prefs.getString("email",null)
+        val tipo:String?=prefs.getString("tipo",null)
+        if (email!=null && tipo=="usuario"){
+            logueo(email.toString(),ProviderType.BASIC)
+        }else if (email!=null && tipo=="empresa"){
+            logueoEmpresa(email.toString())
+        }
     }
 }

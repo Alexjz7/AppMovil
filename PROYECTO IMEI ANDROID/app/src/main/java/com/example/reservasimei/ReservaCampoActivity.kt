@@ -1,47 +1,143 @@
 package com.example.reservasimei
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
-import android.widget.Button
+import android.util.Log
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
+fun CardView.applyEmpresaStyle() {
+    val layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    )
+    layoutParams.topMargin = resources.getDimensionPixelSize(R.dimen.card_margin_top)
+
+    this.layoutParams = layoutParams
+    cardElevation = 0f
+    radius = resources.getDimensionPixelSize(R.dimen.card_cornerRadius).toFloat()
+    setContentPadding(
+        resources.getDimensionPixelSize(R.dimen.card_padding),
+        resources.getDimensionPixelSize(R.dimen.card_padding),
+        resources.getDimensionPixelSize(R.dimen.card_padding),
+        resources.getDimensionPixelSize(R.dimen.card_padding)
+    )
+}
 
 class ReservaCampoActivity : AppCompatActivity() {
     private var userId: Int = -1
+    private var dbF = Firebase.firestore
+    private lateinit var linearLayoutEmpresas: LinearLayout
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_reserva_campo)
 
         userId = intent.getIntExtra("userId", -1)
 
-        val btnCampo=findViewById<androidx.cardview.widget.CardView>(R.id.btnCampo1)
+        val btnCampo = findViewById<CardView>(R.id.btnCampo1)
+        btnCampo.applyEmpresaStyle()
+
         btnCampo.setOnClickListener {
-            var nombreCampo=findViewById<TextView>(R.id.nombre1).text.toString()
+            val nombreCampo = findViewById<TextView>(R.id.nombre1).text.toString()
             Campo(nombreCampo)
         }
 
-        val btnCampo2=findViewById<androidx.cardview.widget.CardView>(R.id.btnCampo2)
-        btnCampo2.setOnClickListener {
-            var nombreCampo=findViewById<TextView>(R.id.nombre2).text.toString()
-            Campo(nombreCampo)
-        }
+        linearLayoutEmpresas = findViewById(R.id.totalEmpresas)
 
-        val btnCampo3=findViewById<androidx.cardview.widget.CardView>(R.id.btnCampo3)
-        btnCampo3.setOnClickListener {
-            var nombreCampo=findViewById<TextView>(R.id.nombre3).text.toString()
-            Campo(nombreCampo)
-        }
-
-        val btnCampo4=findViewById<androidx.cardview.widget.CardView>(R.id.btnCampo4)
-        btnCampo4.setOnClickListener {
-            var nombreCampo=findViewById<TextView>(R.id.nombre4).text.toString()
-            Campo(nombreCampo)
-        }
+        dbF.collection("Empresas")
+            .get()
+            .addOnSuccessListener { documents ->
+                for (document in documents) {
+                    val cardView = createCardView(document)
+                    linearLayoutEmpresas.addView(cardView)
+                }
+            }
+            .addOnFailureListener { exception ->
+                // Maneja el error
+                Log.e("ReservaCampoActivity", "Error al consultar empresas: $exception")
+            }
     }
-    private fun Campo(nombreCampo:String){
-        val i= Intent(this, CamposActivity::class.java)
+
+    private fun createCardView(document: DocumentSnapshot): CardView {
+        val cardView = CardView(this)
+
+        cardView.applyEmpresaStyle()
+
+        val linearLayout = LinearLayout(this)
+        linearLayout.apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(
+                resources.getDimensionPixelSize(R.dimen.card_padding),
+                resources.getDimensionPixelSize(R.dimen.card_padding),
+                resources.getDimensionPixelSize(R.dimen.card_padding),
+                resources.getDimensionPixelSize(R.dimen.card_padding)
+            )
+        }
+
+        val nombreEmpresa = document.getString("nombres")
+        val textViewNombre = TextView(this)
+        textViewNombre.apply {
+            text = "Campo deportivo $nombreEmpresa"
+            textSize = 20f
+            setTextColor(Color.parseColor("#4e73df"))
+            setTypeface(null, Typeface.BOLD)
+        }
+
+        val textViewDisponibles = TextView(this)
+        textViewDisponibles.apply {
+            val idEmpresa = document.getString("email")
+            getNumeroCampos(idEmpresa) { numeroCampos ->
+                text = "Número de campos: $numeroCampos"
+            }
+            textSize = 13f
+            setTypeface(null, Typeface.BOLD)
+        }
+
+        linearLayout.addView(textViewNombre)
+        linearLayout.addView(textViewDisponibles)
+        cardView.addView(linearLayout)
+
+        cardView.setOnClickListener {
+            val nombreCampo = document.getString("email") // Asegúrate de cambiar el nombre del campo según tu modelo de datos
+            Campo("" + nombreCampo)
+        }
+
+        return cardView
+    }
+
+    private fun Campo(nombreCampo: String) {
+        val i = Intent(this, CamposActivity::class.java)
         i.putExtra("userId", userId)
-        i.putExtra("NombreCampo",nombreCampo)
+        i.putExtra("NombreCampo", nombreCampo)
         startActivity(i)
+    }
+
+    private fun getNumeroCampos(idEmpresa: String?, callback: (Int) -> Unit) {
+        if (idEmpresa == null) {
+            callback(0)
+            return
+        }
+        dbF.collection("Campos")
+            .whereEqualTo("id_empresa", idEmpresa)
+            .get()
+            .addOnSuccessListener { documents ->
+                callback(documents.size()) // Llama al callback con el número de documentos que cumplen con la condición
+            }
+            .addOnFailureListener { exception ->
+                Log.e("ReservaCampoActivity", "Error al consultar campos: $exception")
+                callback(0)
+            }
     }
 }

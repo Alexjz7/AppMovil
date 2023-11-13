@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- En res/values/dimens.xml -->
+<resources>
+    <dimen name="card_cornerRadius">10dp</dimen>
+    <dimen name="card_padding">14dp</dimen>
+    <dimen name="card_margin_top">9dp</dimen>
+</resources>

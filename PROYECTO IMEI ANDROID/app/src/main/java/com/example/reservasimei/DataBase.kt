@@ -4,11 +4,16 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
 import com.example.reservasimei.Clases.Reservaciones
 
 class DataBase(context: Context) : SQLiteOpenHelper(context, "UserData", null, 1) {
     override fun onCreate(db: SQLiteDatabase?) {
-        db?.execSQL("create table UserData(user_id INTEGER PRIMARY KEY AUTOINCREMENT,username TEXT, email TEXT, password TEXT)")
+        db?.execSQL("create table UserData(" +
+                "user_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "username TEXT, " +
+                "email TEXT, " +
+                "password TEXT)")
         db?.execSQL("create table Reservaciones(" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "user_id INTEGER, " +
@@ -19,11 +24,22 @@ class DataBase(context: Context) : SQLiteOpenHelper(context, "UserData", null, 1
                 "nombreCampo TEXT, " +
                 "tipoCampo TEXT, " +
                 "precioHora REAL)")
+        db?.execSQL("create table Empresas(" +
+                "id_empresa INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "id_pago INTEGER, " +
+                "id_cancha INTEGER, " +
+                "nombre TEXT, " +
+                "correo TEXT, " +
+                "celular TEXT, " +
+                "horaApertura TEXT, " +
+                "horaCierre TEXT, " +
+                "pass TEXT)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         db?.execSQL("drop table if exists UserData")
         db?.execSQL("drop table if exists Reservations")
+        db?.execSQL("drop table if exists Empresas")
     }
 
     fun insertData(username: String, email: String, password: String): Boolean {
@@ -38,6 +54,33 @@ class DataBase(context: Context) : SQLiteOpenHelper(context, "UserData", null, 1
         }
         return true
     }
+    fun insertEmpresa(
+        idPago: Int?,
+        idCancha: Int?,
+        nombre: String,
+        correo: String,
+        celular: String,
+        horaApertura: String,
+        horaCierre: String,
+        pass: String
+    ): Boolean {
+        val db = this.writableDatabase
+        val cv = ContentValues()
+        idPago?.let { cv.put("id_pago", it) }
+        idCancha?.let { cv.put("id_cancha", it) }
+        cv.put("nombre", nombre)
+        cv.put("correo", correo)
+        cv.put("celular", celular)
+        cv.put("horaApertura", horaApertura)
+        cv.put("horaCierre", horaCierre)
+        cv.put("pass", pass)
+        val result = db.insert("Empresas", null, cv)
+        if (result == -1L) {
+            Log.e("InsertEmpresa", "Fallo la inserción en Empresas. Result: $result")
+            return false
+        }
+        return true
+    }
 
     fun comprobarLogin(email: String, password: String): Int {
         val db = this.readableDatabase
@@ -46,6 +89,21 @@ class DataBase(context: Context) : SQLiteOpenHelper(context, "UserData", null, 1
 
         if (cursor.moveToFirst()) {
             val idIndex=cursor.getColumnIndex("user_id")
+            val userId = cursor.getInt(idIndex)
+            cursor.close()
+            return userId
+        }
+
+        cursor.close()
+        return -1
+    }
+    fun comprobarLoginEmpresa(email: String, password: String): Int {
+        val db = this.readableDatabase
+        val query = "select id_empresa from Empresas where correo='$email' and pass='$password'"
+        val cursor = db.rawQuery(query, null)
+
+        if (cursor.moveToFirst()) {
+            val idIndex=cursor.getColumnIndex("id_empresa")
             val userId = cursor.getInt(idIndex)
             cursor.close()
             return userId
@@ -107,20 +165,37 @@ class DataBase(context: Context) : SQLiteOpenHelper(context, "UserData", null, 1
     }
     fun retornarNombre(userId: Int): String? {
         val db = this.readableDatabase
-        val query = "SELECT username FROM UserData WHERE user_id = $userId"
+        val query = "SELECT email FROM UserData WHERE user_id = $userId"
         val cursor = db.rawQuery(query, null)
 
-        var userName: String? = null
+        var email: String? = null
 
         if (cursor.moveToFirst()) {
-            val userNameIndex = cursor.getColumnIndex("username")
-            userName = cursor.getString(userNameIndex)
+            val userNameIndex = cursor.getColumnIndex("email")
+            email = cursor.getString(userNameIndex)
         }
 
         cursor.close()
         db.close()
 
-        return userName
+        return email
+    }
+    fun retornarNombreEmpresa(userId: Int): String? {
+        val db = this.readableDatabase
+        val query = "SELECT nombre FROM Empresas WHERE id_empresa = $userId"
+        val cursor = db.rawQuery(query, null)
+
+        var nombre: String? = null
+
+        if (cursor.moveToFirst()) {
+            val userNameIndex = cursor.getColumnIndex("nombre")
+            nombre = cursor.getString(userNameIndex)
+        }
+
+        cursor.close()
+        db.close()
+
+        return nombre
     }
     fun buscarReservas(userId: Int): List<Reservaciones> {
         val reservas = ArrayList<Reservaciones>()
