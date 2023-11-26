@@ -83,7 +83,8 @@ class MenuActivity : AppCompatActivity() {
         finish()
     }
     private fun mapa() {
-        val i = Intent(this, LocateActivity::class.java)
+        val i = Intent(this, LocateEmpresasActivity::class.java)
+        i.putExtra("email", correo)
         startActivity(i)
         finish()
     }

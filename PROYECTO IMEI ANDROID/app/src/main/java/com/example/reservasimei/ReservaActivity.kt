@@ -1,26 +1,37 @@
 package com.example.reservasimei
 
+import android.content.ContentValues
 import android.widget.Toast
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Spinner
+import android.widget.TextView
 import com.example.reservasimei.Clases.Reservaciones
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
 class ReservaActivity : AppCompatActivity()  {
-    private var userId: Int = -1
-    private lateinit var db:DataBase
-
+    private var correo: String = ""
+    private var IdDocumento: String = ""
+    private var detalleCampo: String = ""
+    private var detalleEmpresa: String = ""
+    private var dbF = Firebase.firestore
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_reserva)
 
-        userId = intent.getIntExtra("userId", -1)
-        val nombreCampo = intent.getStringExtra("NombreCampo")
-        val campo = intent.getStringExtra("Campo")
+        correo = intent.getStringExtra("correo") ?: ""
+        IdDocumento = intent.getStringExtra("IdDocumento") ?: ""
+        detalleCampo = intent.getStringExtra("Campo") ?: "" // Futbol
+        detalleEmpresa = intent.getStringExtra("NombreEmpresa") ?: ""
+
+        val campoDetalle = findViewById<TextView>(R.id.campoDetalle)
+        campoDetalle.setText("Campo deportivo "+detalleEmpresa.toString()+" - cancha de "+detalleCampo)
 
         val nmrHora= findViewById<EditText>(R.id.etNmrHoras)
         val fecha= findViewById<EditText>(R.id.etfecha)
@@ -36,36 +47,27 @@ class ReservaActivity : AppCompatActivity()  {
         btnVistaReserva.setOnClickListener {
             if (nmrHora.text.toString().isNotEmpty() && fecha.text.toString().isNotEmpty() && hora.text.toString().isNotEmpty()) {
 
-                val reserva = Reservaciones(
-                    userId,
-                    nmrHora.text.toString().toInt(),
-                    fecha.text.toString(),
-                    hora.text.toString(),
-                    spinner.selectedItem.toString(),
-                    "$nombreCampo",
-                    "$campo",
-                    5.0,
-                    nmrHora.text.toString().toInt() * 5.0
+                val reserva = hashMapOf(
+                    "id_cancha" to IdDocumento,
+                    "id_usuario" to correo,
+                    "nmrHoras" to nmrHora.text.toString(),
+                    "fechaReserva" to fecha.text.toString(),
+                    "horaReserva" to hora.text.toString(),
+                    "medioDePago" to spinner.selectedItem.toString()
                 )
 
-                val db = DataBase(this)
-                val exito = db.insertReservacion(
-                    reserva.userId,
-                    reserva.horas,
-                    reserva.fechaReserva,
-                    reserva.horaReserva,
-                    reserva.pago,
-                    reserva.nombreCampo,
-                    reserva.tipoCampo,
-                    reserva.precioHora
-                )
+                dbF.collection("Reservas")
+                    .add(reserva)
+                    .addOnSuccessListener { documentReference ->
+                        Log.d(ContentValues.TAG, "DocumentSnapshot added with ID: ${documentReference.id}")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.w(ContentValues.TAG, "Error adding document", e)
+                    }
+                Toast.makeText(this, "Reserva exitosa", Toast.LENGTH_SHORT).show()
+                val i=Intent(applicationContext,MainActivity::class.java)
+                startActivity(i)
 
-                if (exito) {
-                    Toast.makeText(this, "Reserva exitosa", Toast.LENGTH_SHORT).show()
-                    reservar()
-                } else {
-                    Toast.makeText(this, "Error al hacer la reserva", Toast.LENGTH_SHORT).show()
-                }
             }else{
                 Toast.makeText(this, "Por favor complete todos los campos", Toast.LENGTH_SHORT).show()
             }
@@ -73,7 +75,7 @@ class ReservaActivity : AppCompatActivity()  {
     }
     private fun reservar(){
         val i= Intent(this,ListaReservasActivity::class.java)
-        i.putExtra("userId", userId)
+        i.putExtra("userId", correo)
         startActivity(i)
     }
 }

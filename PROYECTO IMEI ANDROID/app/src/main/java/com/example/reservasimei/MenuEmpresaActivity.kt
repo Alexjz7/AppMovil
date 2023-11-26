@@ -70,6 +70,7 @@ class MenuEmpresaActivity : AppCompatActivity() {
         prefs.clear()
         prefs.apply()
         val i = Intent(this, MainActivity::class.java)
+        finishAffinity()  // Cierra todas las actividades en la pila
         startActivity(i)
         finish()
     }

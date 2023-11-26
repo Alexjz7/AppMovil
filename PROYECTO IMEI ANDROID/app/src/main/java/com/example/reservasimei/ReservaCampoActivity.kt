@@ -32,7 +32,7 @@ fun CardView.applyEmpresaStyle() {
 }
 
 class ReservaCampoActivity : AppCompatActivity() {
-    private var userId: Int = -1
+    private var correo: String = ""
     private var dbF = Firebase.firestore
     private lateinit var linearLayoutEmpresas: LinearLayout
 
@@ -40,18 +40,11 @@ class ReservaCampoActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_reserva_campo)
 
-        userId = intent.getIntExtra("userId", -1)
-
-        val btnCampo = findViewById<CardView>(R.id.btnCampo1)
-        btnCampo.applyEmpresaStyle()
-
-        btnCampo.setOnClickListener {
-            val nombreCampo = findViewById<TextView>(R.id.nombre1).text.toString()
-            Campo(nombreCampo)
-        }
+        correo = intent.getStringExtra("email") ?: ""
 
         linearLayoutEmpresas = findViewById(R.id.totalEmpresas)
 
+        // Consulta todas las empresas en Firebase Firestore
         dbF.collection("Empresas")
             .get()
             .addOnSuccessListener { documents ->
@@ -104,13 +97,13 @@ class ReservaCampoActivity : AppCompatActivity() {
             textSize = 13f
             setTypeface(null, Typeface.BOLD)
         }
-
         linearLayout.addView(textViewNombre)
         linearLayout.addView(textViewDisponibles)
+
         cardView.addView(linearLayout)
 
         cardView.setOnClickListener {
-            val nombreCampo = document.getString("email") // Asegúrate de cambiar el nombre del campo según tu modelo de datos
+            val nombreCampo = document.getString("email")
             Campo("" + nombreCampo)
         }
 
@@ -119,7 +112,7 @@ class ReservaCampoActivity : AppCompatActivity() {
 
     private fun Campo(nombreCampo: String) {
         val i = Intent(this, CamposActivity::class.java)
-        i.putExtra("userId", userId)
+        i.putExtra("correo", correo)
         i.putExtra("NombreCampo", nombreCampo)
         startActivity(i)
     }
@@ -133,7 +126,7 @@ class ReservaCampoActivity : AppCompatActivity() {
             .whereEqualTo("id_empresa", idEmpresa)
             .get()
             .addOnSuccessListener { documents ->
-                callback(documents.size()) // Llama al callback con el número de documentos que cumplen con la condición
+                callback(documents.size())
             }
             .addOnFailureListener { exception ->
                 Log.e("ReservaCampoActivity", "Error al consultar campos: $exception")

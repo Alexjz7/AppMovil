@@ -1,37 +1,113 @@
 package com.example.reservasimei
 
-import androidx.appcompat.app.AppCompatActivity
+import android.graphics.Typeface
 import android.os.Bundle
+import android.util.Log
+import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
 class ListaReservasActivity : AppCompatActivity() {
-    private var userId: Int = -1
+    private var correo: String = ""
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lista_reservas)
-        userId = intent.getIntExtra("userId", -1)
+        correo = intent.getStringExtra("email") ?: ""
 
-        val listadoTextView = findViewById<TextView>(R.id.listado)
+        // Realizar la consulta a Firestore para obtener las reservas del usuario
+        val db = Firebase.firestore
+        db.collection("Reservas")
+            .whereEqualTo("id_usuario", correo)
+            .get()
+            .addOnSuccessListener { documents ->
+                // Recorrer los documentos y crear dinámicamente CardViews para cada reserva
+                val layoutReservas = findViewById<LinearLayout>(R.id.layoutReservas)
+                for (document in documents) {
+                    val cardView = createReservaCardView(document)
+                    layoutReservas.addView(cardView)
+                }
+            }
+            .addOnFailureListener { exception ->
+                // Manejar el error
+                Log.e("ListaReservasActivity", "Error al obtener reservas: $exception")
+            }
+    }
+    private fun createReservaCardView(document: DocumentSnapshot): CardView {
+        val cardView = CardView(this)
+        val layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        layoutParams.topMargin = resources.getDimensionPixelSize(R.dimen.card_margin_top)
+        layoutParams.bottomMargin = resources.getDimensionPixelSize(R.dimen.card_margin_bottom)
+        cardView.layoutParams = layoutParams
 
-        val db = DataBase(this)
+        // Configurar la elevación, esquinas redondeadas y relleno del CardView
+        cardView.cardElevation = resources.getDimension(R.dimen.card_elevation)
+        cardView.radius = resources.getDimensionPixelSize(R.dimen.card_cornerRadius).toFloat()
+        cardView.setContentPadding(
+            resources.getDimensionPixelSize(R.dimen.card_padding),
+            resources.getDimensionPixelSize(R.dimen.card_padding),
+            resources.getDimensionPixelSize(R.dimen.card_padding),
+            resources.getDimensionPixelSize(R.dimen.card_padding)
+        )
 
-        val reservas = db.buscarReservas(userId)
+        // Configurar el contenido del CardView con los datos de la reserva
+        val linearLayout = LinearLayout(this)
+        linearLayout.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        linearLayout.orientation = LinearLayout.VERTICAL
+        linearLayout.setPadding(
+            resources.getDimensionPixelSize(R.dimen.card_content_padding),
+            0,
+            resources.getDimensionPixelSize(R.dimen.card_content_padding),
+            0
+        )
 
-        val listadoReservas = StringBuilder()
+        // Añadir los detalles de la reserva al LinearLayout
+        val idCancha = document.getString("id_cancha")
+        val idUsuario = document.getString("id_usuario")
+        val nmrHoras = document.getString("nmrHoras")
+        val fechaReserva = document.getString("fechaReserva")
+        val horaReserva = document.getString("horaReserva")
+        val medioDePago = document.getString("medioDePago")
 
-        for (reserva in reservas) {
-            listadoReservas.append("ID: ${reserva.id}\n")
-            listadoReservas.append("Horas: ${reserva.horas}\n")
-            listadoReservas.append("Fecha de Reserva: ${reserva.fechaReserva}\n")
-            listadoReservas.append("Hora de Reserva: ${reserva.horaReserva}\n")
-            listadoReservas.append("Pago: ${reserva.pago}\n")
-            listadoReservas.append("Nombre de Campo: ${reserva.nombreCampo}\n")
-            listadoReservas.append("Tipo de Campo: ${reserva.tipoCampo}\n")
-            listadoReservas.append("Precio por Hora: ${reserva.precioHora}\n")
-            listadoReservas.append("Total: ${reserva.total}\n")
-            listadoReservas.append("\n") // Separador entre reservas
-        }
+        val textViewIdCancha = TextView(this)
+        textViewIdCancha.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        textViewIdCancha.text = "ID CANCHA: $idCancha"
+        textViewIdCancha.setTextColor(ContextCompat.getColor(this, R.color.color_Boton))
+        textViewIdCancha.setTextSize(
+            resources.getDimension(R.dimen.card_text_size) / resources.displayMetrics.density
+        )
+        textViewIdCancha.setTypeface(null, Typeface.BOLD)
+        linearLayout.addView(textViewIdCancha)
 
-        listadoTextView.text = listadoReservas.toString()
+        val textViewReserva = TextView(this)
+        textViewReserva.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        textViewReserva.text = "FECHA: $fechaReserva            HORARIO: Alquilado desde $horaReserva por $nmrHoras horas       /     PAGO:$medioDePago"
+        textViewReserva.setTextSize(
+            resources.getDimension(R.dimen.card_text_size) / resources.displayMetrics.density
+        )
+        textViewReserva.setTypeface(null, Typeface.BOLD)
+        linearLayout.addView(textViewReserva)
+
+        // Agregar el LinearLayout al CardView
+        cardView.addView(linearLayout)
+
+        return cardView
     }
 }

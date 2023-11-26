@@ -16,6 +16,9 @@
         android:theme="@style/Theme.ReservasIMEI"
         tools:targetApi="31">
         <activity
+            android:name=".LocateEmpresasActivity"
+            android:exported="false" />
+        <activity
             android:name=".CrearCampoActivity"
             android:exported="false" />
         <activity
@@ -24,6 +27,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
+            android:exported="false"
             android:value="@string/google_maps_key" />
 
         <activity

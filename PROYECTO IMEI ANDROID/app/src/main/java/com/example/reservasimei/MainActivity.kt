@@ -5,12 +5,15 @@ import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.text.TextUtils
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
 class MainActivity : AppCompatActivity() {
     private lateinit var btnLogin:Button
@@ -33,25 +36,39 @@ class MainActivity : AppCompatActivity() {
             if (TextUtils.isEmpty(userText) || TextUtils.isEmpty(passText)){
                 Toast.makeText(this,"Agrega correo y contraseña",Toast.LENGTH_SHORT).show()
             }else{
-                val id_ingreso=db.comprobarLogin(userText,passText)
-                val id_ingresoEmpresa=db.comprobarLoginEmpresa(userText,passText)
-                if (id_ingreso!=-1){
-                    FirebaseAuth.getInstance().signInWithEmailAndPassword(userText.toString(),passText.toString()).addOnCompleteListener(){
-                        if (it.isSuccessful){
+                val usuariosCollection = Firebase.firestore.collection("Usuarios")
+                val usuarioQuery = usuariosCollection.whereEqualTo("email", userText)
+
+                usuarioQuery.get()
+                    .addOnSuccessListener { usuariosSnapshot ->
+                        if (!usuariosSnapshot.isEmpty) {
+                            // El correo pertenece a una empresa
                             logueo(userText,ProviderType.BASIC)
-                            Toast.makeText(this,"Logueo exitoso",Toast.LENGTH_SHORT).show()
-                        }else{
-                            Toast.makeText(this,"No estas registrado",Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Logueo como usuario exitoso", Toast.LENGTH_SHORT).show()
+                        } else {
+                            // Verificar si el correo pertenece a una empresa
+                            val empresasCollection = Firebase.firestore.collection("Empresas")
+                            val empresaQuery = empresasCollection.whereEqualTo("email", userText)
+
+                            empresaQuery.get()
+                                .addOnSuccessListener { empresasSnapshot ->
+                                    if (!empresasSnapshot.isEmpty) {
+                                        // El correo pertenece a una empresa
+                                        logueoEmpresa(userText)
+                                        Toast.makeText(this, "Logueo como empresa exitoso", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        // El correo no pertenece ni a un usuario ni a una empresa
+                                        Toast.makeText(this, "No estás registrado", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                .addOnFailureListener { e ->
+                                    Toast.makeText(this, "Error", Toast.LENGTH_SHORT).show()
+                                }
                         }
                     }
-
-                }else{
-                    if (id_ingresoEmpresa!=-1){
-                        Toast.makeText(this,"Logueo exitoso",Toast.LENGTH_SHORT).show()
-                        logueoEmpresa(userText)
+                    .addOnFailureListener { e ->
+                        Toast.makeText(this, "Error", Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(this,"Usuario o contraseña equivocados",Toast.LENGTH_SHORT).show()
-                }
             }
         }
         val btnRegistrar=findViewById<TextView>(R.id.btnRegistrar)
